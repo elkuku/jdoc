@@ -1,0 +1,3 @@
+[submodule "sources/joomla-platform/current"]
+	path = sources/joomla-platform/current
+	url = git://github.com/joomla/joomla-platform.git
