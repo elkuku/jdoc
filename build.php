@@ -19,6 +19,8 @@ error_reporting(- 1);
 define('JPATH_BASE', __DIR__);
 define('JPATH_SITE', __DIR__);
 
+define('OUTPUT_DIR', '/home/elkuku/stormspace/jdoc-gh-pages');
+
 /**
  * Bootstrap the Joomla! Platform.
  */
@@ -111,6 +113,11 @@ class JDocBuild extends JApplicationCli
 
         if(! JFolder::exists($platformBase.'/'.$b))
             throw new Exception(sprintf('Path %s does not exist', $platformBase.'/'.$b));
+
+        if('current' == $a || 'current' == $b)
+        {
+            exec('cd '.$platformBase.'/current/ && git describe > version.txt');
+        }
 
         $this->notes[$a] = array();
         $this->notes[$b] = array();
@@ -219,17 +226,24 @@ class JDocBuild extends JApplicationCli
             }
         }
 
+        $this->formatHtml($output, $a, $b);
+    }
+
+    private function formatHtml($output, $a, $b)
+    {
         $html = array();
 
         /*@var JDocDiffResult $result */
         foreach($output as $className => $result)
         {
-            $html[] = '<h2 class="state'.$result->status.'">'.$className.'</h2>';
+            $html[] = '<h2 class="state'.$result->status.'">'
+                .'<a name ="'.$className.'" href="#'.$className.'">'
+                .$className
+                .'</a>'
+                .'</h2>';
 
             if($result->note)
-            {
                 $html[] = '<h3 class="note">'.$result->note.'</h3>';
-            }
 
             $html[] = '<ul>';
 
@@ -288,54 +302,62 @@ class JDocBuild extends JApplicationCli
         $page[] = '<title>J!Doc - Differences</title>';
         $page[] = '<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />';
 
-        $page[] = '<link href="assets/css/jdoc.css" media="screen" rel="stylesheet" type="text/css" />';
+        $page[] = '<link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">';
+        $page[] = '<link rel="stylesheet" type="text/css" media="screen" href="stylesheets/jdoc.css" />';
 
         $page[] = '</head>';
         $page[] = '<body>';
 
-        $page[] = '<div class="wrapper">';
+        $page[] = '<div class="outer">';
 
-        $page[] = '<h1 class="center">J!Doc</h1>';
+        $page[] = '<h1 class="center"><a href="index.html">J!Doc</a></h1>';
         $page[] = '<h1 class="center">Changes in classes between version</h1>';
         $page[] = '<h1 class="center">'.sprintf('%s and %s', $a, $b).'</h1>';
 //        $page[] = '<h1 class="center">'.sprintf('JDoc - Changes in classes between version %s and %s', $a, $b).'</h1>';
+
+        if('current' == $a || 'current' == $b)
+        {
+            $page[] = 'Current: '.JFile::read(JPATH_BASE.'/sources/joomla-platform/current/version.txt');
+        }
+
 
         $page[] = implode("\n", $html);
 
         $page[] = '</div>';
 
         $page[] = '</body>';
-        $page[] = '<html>';
+        $page[] = '</html>';
 
         $contents = implode("\n", $page);
 
-        JFile::write(__DIR__.'/out/html/changes.html', $contents);
+//        JFile::write(__DIR__.'/out/html/changes.html', $contents);
+        JFile::write(OUTPUT_DIR.'/changes.html', $contents);
 
-        $this->out('File has been written to: '.__DIR__.'/out/html/changes.html');
+        $this->out('File has been written to: '.OUTPUT_DIR.'/changes.html');
+
     }
 
     private function getNotes($path)
-{
-    $xml = JFactory::getXml($path);
-
-    if(! $xml)
-        throw new Exception(__METHOD__.' - Unreadable XML file at: '.$path);
-
-    $notes = array();
-
-    $note = new JDocDiffResultNote;
-
-    foreach($xml->class as $class)
     {
-        $note->className = (string)$class->attributes()->name;
-        $note->note = (string)$class->note;
+        $xml = JFactory::getXml($path);
 
-        $notes[$note->className] = $note;
+        if(! $xml)
+            throw new Exception(__METHOD__.' - Unreadable XML file at: '.$path);
+
+        $notes = array();
+
+        foreach($xml->class as $class)
+        {
+            $note = new JDocDiffResultNote;
+
+            $note->className = (string)$class->attributes()->name;
+            $note->note = (string)$class->note;
+
+            $notes[$note->className] = $note;
+        }
+
+        return $notes;
     }
-
-    return $notes;
-}
-
 
     private function processXml($path, $key)
     {
@@ -415,6 +437,7 @@ class JDocDiffResultNote
 
     public $note = '';
 }
+
 try
 {
     // Execute the application.

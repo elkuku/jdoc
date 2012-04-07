@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <notes>
-<class name="JFTP">
-    <note>JFTP is now called JClientFtp</note>
-</class>
-<class name="JParameter">
-    <note>Use JForm instead</note>
-</class>
+    <class name="JFTP">
+        <note>JFTP is now called JClientFtp</note>
+    </class>
+    <class name="JParameter">
+        <note>Use JForm instead</note>
+    </class>
     <class name="JFormFieldEditors">
         <note>Use JFormFieldPlugins instead</note>
     </class>
