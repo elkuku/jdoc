@@ -1,0 +1,291 @@
+/**
+ * @version $Id: default.css 23 2010-11-08 19:30:35Z elkuku $
+ * @package     JFrameWorkDoc
+ * @subpackage  CSS
+ * @author      EasyJoomla {@link http://www.easy-joomla.org Easy-Joomla.org}
+ * @author      Nikolai Plath (elkuku) {@link http://www.nik-it.de NiK-IT.de}
+ * @author      Created on 24.09.2008
+ */
+body {
+   border: 3px dashed gray;
+   margin: 0.1em;
+   padding: 0.5em;
+}
+
+#homeLink {
+   float: right;
+}
+
+#permaLink {
+   color: black;
+   text-decoration: none;
+   padding: 0.1em;
+   margin: 0.7em;
+   border: 1px solid blue;
+}
+
+#permaLink:hover {
+   background-color: #ffc;
+}
+
+#homeLink a {
+   display: block;
+   border: 1px dotted gray;
+   padding: 0.3em;
+   text-decoration: none;
+   color: black;
+}
+
+#homeLink a:hover {
+   background-color: #ffc;
+}
+
+div.error {
+   background-color: #ffb2b2;
+   padding: 0.2em;
+}
+
+a img {
+   border: 0;
+}
+
+div#outer {
+   border: 2px dashed gray;
+   padding: 0.5em;
+}
+
+div#jdocDisplay {
+   float: left;
+}
+
+div#outer a {
+   color: #0000b2;
+   text-decoration: none;
+}
+
+div#outer a:hover,div#outer a:focus {
+   background-color: #ffffcc;
+   text-decoration: underline;
+}
+
+ul.classpanel {
+   list-style: none;
+   padding-left: 0px;
+   margin-top: 0px;
+}
+
+ul.classpanel li {
+   cursor: pointer;
+   border-bottom: 1px solid gray;
+}
+
+ul.classpanel li.st_class {
+   background-color: #b2cce5;
+   padding-left: 0.3em;
+   padding-right: 0.3em;
+}
+
+ul.classpanel li.st_method {
+   background-color: #ccff66;
+   padding-left: 0.3em;
+   padding-right: 0.3em;
+}
+
+ul.classpanel li.st_method_changed {
+   background-color: #ffcc99;
+   padding-left: 0.3em;
+   padding-right: 0.3em;
+}
+
+ul.classpanel li.st_class:hover {
+   background-color: #ffffcc;
+}
+
+ul.classpanel li.st_method:hover {
+   background-color: #ffffcc;
+}
+
+ul.classpanel li.st_method_changed:hover {
+   background-color: #ffffcc;
+}
+
+div.DocComment {
+   font-family: monospace;
+   color: gray;
+}
+
+label {
+   border-bottom: 1px dashed blue;
+}
+
+label:hover {
+   background-color: #ffffcc;
+   cursor: pointer;
+}
+
+div.easy_footer {
+   text-align: center;
+   padding: 0.3em;
+   font-size: 0.9em;
+   background-color: #e5e5e5;
+}
+
+div.easy_footer a {
+   text-decoration: none;
+   color: black;
+   font-family: monospace;
+   font-size: 1.3em;
+   font-weight: bold;
+}
+
+div.easy_footer a:hover {
+   background-color: #ffffcc;
+   text-decoration: underline;
+}
+
+div.valid_xhtml {
+   float: right;
+   padding: 1px;
+   background-color: #cce5ff;
+   text-align: right
+}
+
+div.valid_xhtml a {
+   font-size: 1em;
+   font-weight: normal;
+}
+
+a.toplink {
+   width: 10%;
+   display: inline-block;
+   text-align: center;
+   padding: 2px;
+   border-top: 2px solid #99e500;
+   border-bottom: 2px solid #99e500;
+   background-color: #e5ff99;
+   text-decoration: none;
+   float: left;
+}
+
+a.toplink:hover {
+   background-color: #e5ff00;
+   text-decoration: none;
+}
+
+.img {
+   background-repeat: no-repeat;
+   background-position: 4px 3px ! important;
+   padding-left: 27px;
+   padding-top: 5px;
+   padding-bottom: 5px;
+}
+
+.img2 {
+   background-repeat: no-repeat;
+   background-position: 4px 3px ! important;
+   padding-left: 27px;
+   padding-right: 20px;
+   margin-left: 5px;
+}
+
+a.external {
+   background-image: url(../images/external_link.gif);
+   background-position: right;
+   background-repeat: no-repeat;
+   padding-right: 16px;
+}
+
+.icon-16-joomla {
+   background-image: url(../images/jfavicon_t.ico);
+}
+
+.comment {
+   background-image: url(../images/comment.png);
+}
+
+.comment_no {
+   background-image: url(../images/comment_no.png);
+}
+
+tt.defined_in {
+   background-color: #ffffcc;
+   font-size: 1.2em;
+   padding-left: 0.5em;
+   padding-right: 0.5em;
+}
+
+.tip {
+   width: 500px;
+   z-index: 13000;
+}
+
+.tip-title {
+   font-weight: bold;
+   font-size: 12px;
+   margin: 0;
+   padding: 8px 8px 4px;
+   background-color: #ccff99;
+}
+
+.tip-text {
+   font-size: 11px;
+   padding: 4px 8px 8px;
+   background-color: #ffffcc;
+}
+
+a.jfd_dl {
+   color: #0000b2;
+   text-decoration: none;
+}
+
+a.jfd_dl:hover {
+   background-color: #ffffcc;
+   color: black;
+   text-decoration: underline;
+}
+
+pre.svn_info {
+   background-color: #eee;
+   font-family: monospace;
+   padding: 0.5em;
+   border: 1px solid gray;
+}
+
+ul {
+   list-style: none;
+   margin: 0;
+   padding: 0;
+}
+
+li a {
+   text-decoration: none;
+   color: black;
+   display: block;
+}
+
+li a:hover {
+   background-color: #ffc;
+}
+
+li.version a {
+   display: inline;
+   color: blue;
+   font-weight: bold;
+}
+
+/* Colors ;) */
+.red {
+   background-color: red;
+}
+
+.green {
+   background-color: green;
+}
+
+.J_1_5 {
+   background-image: url(../images/Compat_icon_1_5.png);
+}
+
+.J_1_6 {
+   background-image: url(../images/Compat_icon_1_6.png);
+}

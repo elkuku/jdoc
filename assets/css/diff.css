@@ -1,0 +1,31 @@
+/**
+ * @version $Id: diff.css 23 2010-11-08 19:30:35Z elkuku $
+ * @package     JFrameWorkDoc
+ * @subpackage  CSS
+ * @author      EasyJoomla {@link http://www.easy-joomla.org Easy-Joomla.org}
+ * @author      Nikolai Plath (elkuku) {@link http://www.nik-it.de NiK-IT.de}
+ * @author      Created on 24.09.2008
+ */
+
+td.diff-addedline {
+	background-color: #ddffdd;
+}
+td.diff-deletedline {
+	background-color: #ffffbb;
+}
+
+table.diff td {
+	font-family: monospace;
+	font-size: 100%;
+}
+
+table.diff td.diff-addedline strong, table.diff td.diff-deletedline strong {
+	color: red;
+}
+
+table.diff {
+	border: 1px dashed gray;
+}
+table.diff tr {
+	border: 1px dashed gray;
+}
