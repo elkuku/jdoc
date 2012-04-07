@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="FooBar" default="dist">
+
+    <!-- ============================================  -->
+    <!-- Target: prepare                               -->
+    <!-- ============================================  -->
+    <target name="prepare">
+        <echo msg="Making directory ./build" />
+        <mkdir dir="./build" />
+    </target>
+
+    <!-- ============================================  -->
+    <!-- Target: build                                 -->
+    <!-- ============================================  -->
+    <target name="build" depends="prepare">
+        <echo msg="Copying files to build directory..." />
+    <!--
+
+            <echo msg="Copying ./about.php to ./build directory..." />
+            <copy file="./about.php" tofile="./build/about.php" />
+
+            <echo msg="Copying ./browsers.php to ./build directory..." />
+            <copy file="./browsers.php" tofile="./build/browsers.php" />
+
+            <echo msg="Copying ./contact.php to ./build directory..." />
+            <copy file="./contact.php" tofile="./build/contact.php" />
+            -->
+        </target>
+
+    <target name="phpdox" depends="prepare"
+            description="Generate API documentation using PHPDox">
+        <exec executable="phpdox">
+            <arg value="-c" />
+            <arg path="${source}" />
+            <arg value="-d" />
+            <arg path="${basedir}/build/api" />
+            <arg value="-x" />
+            <arg path="${basedir}/build/docs" />
+            <arg value="-g" />
+            <arg value="html" />
+        </exec>
+    </target>
+
+
+
+    <!-- ============================================  -->
+    <!-- (DEFAULT)  Target: dist                       -->
+    <!-- ============================================  -->
+    <target name="dist" depends="phpdox">
+        <echo msg="Creating archive..." />
+
+        <tar destfile="./build/build.tar.gz" compression="gzip">
+            <fileset dir="./build">
+                <include name="*" />
+            </fileset>
+        </tar>
+
+        <echo msg="Files copied and compressed in build directory OK!" />
+    </target>
+</project>
