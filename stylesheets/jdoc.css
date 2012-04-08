@@ -53,3 +53,7 @@ h2.state2 {
 h3.note {
     background-color: #ffc;
 }
+
+span.versionNr {
+    color: yellow;
+}
