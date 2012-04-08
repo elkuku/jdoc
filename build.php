@@ -40,17 +40,21 @@ class JDocBuild extends JApplicationCli
 
     private $notes = array();
 
+    private $page = null;
+
     public function doExecute()
     {
         $this->out('JDoc CLI builder');
 
         $this->clean()
             ->prepare()
-            ->buildDocu();
+            ->buildDocu()
+            ->generateClassList();
 
         // @todo get version from input (any)
         $a = '11.4';
         $b = 'current';
+//        $b = '11.4';
 
         $this->makeDiff($a, $b);
 
@@ -102,6 +106,84 @@ class JDocBuild extends JApplicationCli
         }
 
         return $this;
+    }
+
+    private function generateClassList()
+    {
+        $platformBase = JPATH_BASE.'/sources/joomla-platform';
+        $versions = JFolder::folders($platformBase);
+
+        foreach($versions as $version)
+        {
+            $path = $platformBase.'/'.$version.'/build/docs/classes.xml';
+
+            $xml = JFactory::getXml($path);
+
+            if(! $xml)
+                throw new Exception(__METHOD__.' - Unreadable XML file at: '.$path);
+
+            $list = array();
+
+            /* @var JXMLElement $class */
+            foreach($xml->class as $class)
+            {
+                $name = (string)$class->attributes()->name;
+
+                if($name != (string)$class->attributes()->full)
+                    throw new Exception(__METHOD__.' dunno what to do :( --> '
+                        .$name.' vs '.$class->attributes()->full);
+
+                $parts = explode('/', $class->attributes()->xml);
+
+                $package = (count($parts)) ? ucfirst($parts[1]) : 'Base';
+
+                $list[$package][] = $name;
+            }
+
+            ksort($list);
+
+            $html = array();
+
+            foreach($list as $package => $classes)
+            {
+                $html[] = '<h2>'.$package.'</h2>';
+
+                $html[] = '<ul>';
+
+                sort($classes);
+
+                foreach($classes as $class)
+                {
+                    $html[] = '<li>'.$class.'</li>';
+                }
+                $html[] = '</ul>';
+
+            }
+
+            ob_start();
+
+            $this->page = new stdClass;
+
+            $this->page->body = implode("\n", $html);
+
+            $versionTo = ('current' == $version)
+                ? 'current ('.JFile::read(JPATH_BASE.'/sources/joomla-platform/current/version.txt').')'
+                : $version;
+
+
+            $this->page->tagline = sprintf('Classes in version %s'
+                , '<span class="versionNr">'.$versionTo.'</span>');
+
+            include 'out/tmpl/default.php';
+
+            $contents = ob_get_clean();
+
+            $path = OUTPUT_DIR.'/classes-'.$version.'.html';
+            JFile::write($path, $contents);
+
+            $this->out('File has been written to: '.$path);
+        }
+
     }
 
     private function makeDiff($a, $b)
@@ -293,45 +375,25 @@ class JDocBuild extends JApplicationCli
             $html[] = '</ul>';
         }
 
-        $page = array();
+        ob_start();
 
-        $page[] = '<!DOCTYPE html>';
-        $page[] = '<html>';
-        $page[] = '<head>';
-        $page[] = '<meta charset="utf-8">';
-        $page[] = '<title>J!Doc - Differences</title>';
-        $page[] = '<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />';
+        $this->page = new stdClass;
 
-        $page[] = '<link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">';
-        $page[] = '<link rel="stylesheet" type="text/css" media="screen" href="stylesheets/jdoc.css" />';
+        $this->page->body = implode("\n", $html);
 
-        $page[] = '</head>';
-        $page[] = '<body>';
+        $versionTo = ('current' == $a || 'current' == $b)
+            ? JFile::read(JPATH_BASE.'/sources/joomla-platform/current/version.txt')
+            : $b;
 
-        $page[] = '<div class="outer">';
+        $this->page->tagline = sprintf('Changes in classes from version %s to %s'
+            , '<span class="versionNr">'.$a.'</span>'
+            , '<span class="versionNr">'.$versionTo.'</span>');
 
-        $page[] = '<h1 class="center"><a href="index.html">J!Doc</a></h1>';
-        $page[] = '<h1 class="center">Changes in classes between version</h1>';
-        $page[] = '<h1 class="center">'.sprintf('%s and %s', $a, $b).'</h1>';
-//        $page[] = '<h1 class="center">'.sprintf('JDoc - Changes in classes between version %s and %s', $a, $b).'</h1>';
+        include 'out/tmpl/default.php';
 
-        if('current' == $a || 'current' == $b)
-        {
-            $page[] = 'Current: '.JFile::read(JPATH_BASE.'/sources/joomla-platform/current/version.txt');
-        }
+        $contents = ob_get_clean();
 
-
-        $page[] = implode("\n", $html);
-
-        $page[] = '</div>';
-
-        $page[] = '</body>';
-        $page[] = '</html>';
-
-        $contents = implode("\n", $page);
-
-//        JFile::write(__DIR__.'/out/html/changes.html', $contents);
-        JFile::write(OUTPUT_DIR.'/changes.html', $contents);
+        JFile::write(OUTPUT_DIR.'/changes-'.$b.'.html', $contents);
 
         $this->out('File has been written to: '.OUTPUT_DIR.'/changes.html');
 
@@ -399,8 +461,6 @@ class JDocBuild extends JApplicationCli
         ksort($this->classDiff);
     }
 }
-
-//class
 
 class JDocDiffResultClass
 {
