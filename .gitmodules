@@ -7,3 +7,6 @@
 [submodule "sources/joomla-platform/11.3"]
 	path = sources/joomla-platform/11.3
 	url = git://github.com/joomla/joomla-platform.git
+[submodule "sources/joomla-platform/11.4"]
+	path = sources/joomla-platform/11.4
+	url = git://github.com/joomla/joomla-platform.git
