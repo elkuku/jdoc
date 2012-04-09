@@ -52,12 +52,19 @@ class JDocBuild extends JApplicationCli
         $this->clean()
             ->prepare()
             ->buildDocu()
+//            ->generateDiffList()
             ->generateClassList();
 
         // @todo get version from input (any)
         $a = '11.4';
         $b = 'current';
 //        $b = '11.4';
+        $jTarget = 'joomla-platform';
+
+        $this->makeDiff($a, $b, $jTarget);
+        $a = '11.3';
+//        $b = 'current';
+        $b = '11.4';
         $jTarget = 'joomla-platform';
 
         $this->makeDiff($a, $b, $jTarget);
@@ -68,6 +75,9 @@ class JDocBuild extends JApplicationCli
     private function clean()
     {
         $this->say('cleaning...', false);
+
+        if(! $this->input->get('rebuild'))
+            return $this;
 
         JFolder::delete(JPATH_BASE.'/build/');
         JFolder::create(JPATH_BASE.'/build/');
@@ -91,17 +101,20 @@ class JDocBuild extends JApplicationCli
 
     private function buildDocu()
     {
-        foreach($this->mainTargets as $target)
+        if(! $this->input->get('rebuild'))
+            return $this;
+
+        foreach($this->mainTargets as $jTarget)
         {
-            $folders = JFolder::folders(JPATH_BASE.'/sources/'.$target);
+            $folders = JFolder::folders(JPATH_BASE.'/sources/'.$jTarget);
 
             if(! $folders)
-                throw new Exception('Please put the Joomla! sources in their respective folder in: '.JPATH_BASE.'/sources/'.$target, 1);
+                throw new Exception('Please put the Joomla! sources in their respective folder in: '.JPATH_BASE.'/sources/'.$jTarget, 1);
 
             foreach($folders as $folder)
             {
-                $sourceFolder = JPATH_BASE.'/sources/'.$target.'/'.$folder.'/libraries';
-                $targetFolder = JPATH_BASE.'/build/'.$target.'/'.$folder;
+                $sourceFolder = JPATH_BASE.'/sources/'.$jTarget.'/'.$folder.'/libraries';
+                $targetFolder = JPATH_BASE.'/build/'.$jTarget.'/'.$folder;
 
                 $this->say('Running phpdox in folder '.$sourceFolder.'...', false);
 
@@ -120,6 +133,10 @@ class JDocBuild extends JApplicationCli
                 if(0) //--vv
                     $this->say($output);
 
+                if('current' == $folder)
+                    exec('cd '.JPATH_BASE.'/sources/'.$jTarget.'/current/ && git describe'
+                        .' > '.JPATH_BASE.'/build/'.$jTarget.'/current/version.txt');
+
                 $this->say('ok');
             }
         }
@@ -131,80 +148,140 @@ class JDocBuild extends JApplicationCli
     {
         foreach($this->mainTargets as $target)
         {
-        $jBase = JPATH_BASE.'/build/'.$target;
-        $versions = JFolder::folders($jBase);
+            $jBase = JPATH_BASE.'/build/'.$target;
+            $versions = JFolder::folders($jBase);
 
-        foreach($versions as $version)
-        {
-            $path = $jBase.'/'.$version.'/xml/classes.xml';
-
-            $xml = JFactory::getXml($path);
-
-            if(! $xml)
-                throw new Exception(__METHOD__.' - Unreadable XML file at: '.$path);
-
-            $list = array();
-
-            /* @var JXMLElement $class */
-            foreach($xml->class as $class)
+            foreach($versions as $version)
             {
-                $name = (string)$class->attributes()->name;
+                $path = $jBase.'/'.$version.'/xml/classes.xml';
 
-                if($name != (string)$class->attributes()->full)
-                    throw new Exception(__METHOD__.' dunno what to do :( --> '
-                        .$name.' vs '.$class->attributes()->full);
+                $xml = JFactory::getXml($path);
 
-                $parts = explode('/', $class->attributes()->xml);
+                if(! $xml)
+                    throw new Exception(__METHOD__.' - Unreadable XML file at: '.$path);
 
-                $package = (count($parts)) ? ucfirst($parts[1]) : 'Base';
+                $list = array();
 
-                $list[$package][] = $name;
-            }
-
-            ksort($list);
-
-            $html = array();
-
-            foreach($list as $package => $classes)
-            {
-                $html[] = '<h2>'.$package.'</h2>';
-
-                $html[] = '<ul>';
-
-                sort($classes);
-
-                foreach($classes as $class)
+                /* @var JXMLElement $class */
+                foreach($xml->class as $class)
                 {
-                    $html[] = '<li>'.$class.'</li>';
+                    $name = (string)$class->attributes()->name;
+
+                    if($name != (string)$class->attributes()->full)
+                        throw new Exception(__METHOD__.' dunno what to do :( --> '
+                            .$name.' vs '.$class->attributes()->full);
+
+                    $parts = explode('/', $class->attributes()->xml);
+
+                    array_pop($parts);
+$a = count($parts);
+                    if(1 == count($parts))
+                    {
+                        $library = 'Base';
+                        $package = 'Base';
+                    }
+                    else
+                    {
+                        $library = ucfirst($parts[1]);
+                        $package =(isset($parts[2])) ? ucfirst($parts[2]) : 'Base';
+                    }
+
+                    $list[$library][$package][] = $name;
                 }
-                $html[] = '</ul>';
 
+                ksort($list);
+
+                $html = array();
+
+                foreach($list as $library => $packages)
+                {
+                    $html[] = '<h2>'.$library.'</h2>';
+
+                    foreach($packages as $package => $classes)
+                    {
+                        $html[] = '<h3>'.$package.'</h3>';
+
+                        $html[] = '<ul>';
+
+                        sort($classes);
+
+                        foreach($classes as $class)
+                        {
+                            $html[] = '<li>'.$class.'</li>';
+                        }
+                        $html[] = '</ul>';
+
+                    }
+                }
+
+                ob_start();
+
+                $this->page = new stdClass;
+
+                $this->page->body = implode("\n", $html);
+
+                $versionTo = ('current' == $version)
+                    ? 'current ('.JFile::read($jBase.'/current/version.txt').')'
+                    : $version;
+
+                $this->page->tagline = sprintf('Classes in '.$target.' version %s'
+                    , '<span class="versionNr">'.$versionTo.'</span>');
+
+                include 'out/tmpl/default.php';
+
+                $contents = ob_get_clean();
+
+                $path = OUTPUT_DIR.'/classes/'.$target.'-'.$version.'.html';
+
+                JFile::write($path, $contents);
+
+                $this->out('File has been written to: '.$path);
             }
-
-            ob_start();
-
-            $this->page = new stdClass;
-
-            $this->page->body = implode("\n", $html);
-
-            $versionTo = ('current' == $version)
-                ? 'current ('.JFile::read($jBase.'/current/version.txt').')'
-                : $version;
-
-            $this->page->tagline = sprintf('Classes in '.$target.' version %s'
-                , '<span class="versionNr">'.$versionTo.'</span>');
-
-            include 'out/tmpl/default.php';
-
-            $contents = ob_get_clean();
-
-            $path = OUTPUT_DIR.'/classes/'.$target.'-'.$version.'.html';
-
-            JFile::write($path, $contents);
-
-            $this->out('File has been written to: '.$path);
         }
+
+    }
+
+    private function makeIndexPage()
+    {
+        $html = array();
+
+        $packages = JFolder::folders(JPATH_BASE.'/sources');
+
+        $html[] = '<h2>Welcome to the J!Doc Pages</h2>';
+
+        foreach($packages as $package)
+        {
+            $versions = JFolder::folders(JPATH_BASE.'/sources/'.$package);
+
+            foreach($versions as $version)
+            {
+                $html[] = '<h3>Changes in classes</h3>';
+                $html[] = '<h3>Clhanges in classes</h3>';
+            }
         }
+
+        ob_start();
+
+        $this->page = new stdClass;
+
+        $this->page->body = implode("\n", $html);
+
+        $versionTo = ('current' == $version)
+            ? 'current ('.JFile::read($jBase.'/current/version.txt').')'
+            : $version;
+
+        $this->page->tagline = sprintf('Classes in '.$target.' version %s'
+            , '<span class="versionNr">'.$versionTo.'</span>');
+
+        include 'out/tmpl/default.php';
+
+        $contents = ob_get_clean();
+
+        $path = OUTPUT_DIR.'/classes/'.$target.'-'.$version.'.html';
+
+        JFile::write($path, $contents);
+
+        $this->out('File has been written to: '.$path);
 
     }
 
@@ -217,9 +294,6 @@ class JDocBuild extends JApplicationCli
 
         if(! JFolder::exists($jBase.'/'.$b))
             throw new Exception(sprintf('Path %s does not exist', $jBase.'/'.$b));
-
-        if('current' == $a || 'current' == $b)
-            exec('cd '.$jBase.'/current/ && git describe > '.JPATH_BASE.'/build/'.$jTarget.'/current/version.txt');
 
         $this->notes[$a] = array();
         $this->notes[$b] = array();

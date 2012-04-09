@@ -12,20 +12,18 @@
 
 <head>
     <meta charset="utf-8">
-    <title>J!Doc - Differences</title>
-    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
+    <title>J!Doc</title>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon"/>
 
-    <link rel="stylesheet" type="text/css" media="screen" href="../stylesheets/stylesheet.css">
-    <link rel="stylesheet" type="text/css" media="screen" href="../stylesheets/jdoc.css"/>
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/jdoc.css"/>
 </head>
 
 <body>
 
 <div id="header_wrap" class="outer">
     <header class="inner">
-        <a id="forkme_banner" href="https://github.com/elkuku/jdoc">Fork Me on GitHub</a>
-
-        <h1 id="project_title"><a href="../index.html">J!Doc</a></h1>
+        <h1 id="project_title"><a href="index.html">J!Doc</a></h1>
 
         <h2 id="project_tagline"><?= $this->page->tagline ?></h2>
     </header>
