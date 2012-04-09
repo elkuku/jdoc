@@ -42,9 +42,12 @@ class JDocBuild extends JApplicationCli
 
     private $page = null;
 
+    private $mainTargets = array('joomla-platform', 'joomla-cms');
+
     public function doExecute()
     {
-        $this->out('JDoc CLI builder');
+        $this->say('JDoc CLI builder');
+        $this->say('================');
 
         $this->clean()
             ->prepare()
@@ -55,14 +58,21 @@ class JDocBuild extends JApplicationCli
         $a = '11.4';
         $b = 'current';
 //        $b = '11.4';
+        $jTarget = 'joomla-platform';
 
-        $this->makeDiff($a, $b);
+        $this->makeDiff($a, $b, $jTarget);
 
         $this->out('Finished =;');
     }
 
     private function clean()
     {
+        $this->say('cleaning...', false);
+
+        JFolder::delete(JPATH_BASE.'/build/');
+        JFolder::create(JPATH_BASE.'/build/');
+
+        $this->say('ok');
 
         return $this;
     }
@@ -81,28 +91,37 @@ class JDocBuild extends JApplicationCli
 
     private function buildDocu()
     {
-        $folders = JFolder::folders(JPATH_BASE.'/sources/joomla-platform', '.', false, true);
-
-        if(! $folders)
-            throw new Exception('Please put the platform sources in their respective folder in: '.JPATH_BASE.'/sources/joomla-platform', 1);
-
-        foreach($folders as $folder)
+        foreach($this->mainTargets as $target)
         {
-            $this->out('Running phpdox in folder '.$folder);
+            $folders = JFolder::folders(JPATH_BASE.'/sources/'.$target);
 
-            $command = 'phpdox'
-                // Input files
-                .' -c '.$folder.'/libraries/joomla'
-                // Output directory for generated documentation
-                .' -d '.$folder.'/build/api'
-                // Output directory for collected data
-                .' -x '.$folder.'/build/docs'
-                // Generate documentation
-                .' -g html';
+            if(! $folders)
+                throw new Exception('Please put the Joomla! sources in their respective folder in: '.JPATH_BASE.'/sources/'.$target, 1);
 
-            $output = shell_exec($command);
+            foreach($folders as $folder)
+            {
+                $sourceFolder = JPATH_BASE.'/sources/'.$target.'/'.$folder.'/libraries';
+                $targetFolder = JPATH_BASE.'/build/'.$target.'/'.$folder;
 
-            $this->out($output);
+                $this->say('Running phpdox in folder '.$sourceFolder.'...', false);
+
+                $command = 'phpdox'
+                    // Input files
+                    .' -c '.$sourceFolder
+                    // Output directory for generated documentation
+                    .' -d '.$targetFolder.'/api'
+                    // Output directory for collected data
+                    .' -x '.$targetFolder.'/xml'
+                    // Generate documentation
+                    .' -g html';
+
+                $output = shell_exec($command);
+
+                if(0) //--vv
+                    $this->say($output);
+
+                $this->say('ok');
+            }
         }
 
         return $this;
@@ -110,12 +129,14 @@ class JDocBuild extends JApplicationCli
 
     private function generateClassList()
     {
-        $platformBase = JPATH_BASE.'/sources/joomla-platform';
-        $versions = JFolder::folders($platformBase);
+        foreach($this->mainTargets as $target)
+        {
+        $jBase = JPATH_BASE.'/build/'.$target;
+        $versions = JFolder::folders($jBase);
 
         foreach($versions as $version)
         {
-            $path = $platformBase.'/'.$version.'/build/docs/classes.xml';
+            $path = $jBase.'/'.$version.'/xml/classes.xml';
 
             $xml = JFactory::getXml($path);
 
@@ -167,39 +188,38 @@ class JDocBuild extends JApplicationCli
             $this->page->body = implode("\n", $html);
 
             $versionTo = ('current' == $version)
-                ? 'current ('.JFile::read(JPATH_BASE.'/sources/joomla-platform/current/version.txt').')'
+                ? 'current ('.JFile::read($jBase.'/current/version.txt').')'
                 : $version;
 
-
-            $this->page->tagline = sprintf('Classes in version %s'
+            $this->page->tagline = sprintf('Classes in '.$target.' version %s'
                 , '<span class="versionNr">'.$versionTo.'</span>');
 
             include 'out/tmpl/default.php';
 
             $contents = ob_get_clean();
 
-            $path = OUTPUT_DIR.'/classes-'.$version.'.html';
+            $path = OUTPUT_DIR.'/classes/'.$target.'-'.$version.'.html';
+
             JFile::write($path, $contents);
 
             $this->out('File has been written to: '.$path);
         }
+        }
 
     }
 
-    private function makeDiff($a, $b)
+    private function makeDiff($a, $b, $jTarget)
     {
-        $platformBase = JPATH_BASE.'/sources/joomla-platform';
+        $jBase = JPATH_BASE.'/sources/'.$jTarget;
 
-        if(! JFolder::exists($platformBase.'/'.$a))
-            throw new Exception(sprintf('Path %s does not exist', $platformBase.'/'.$a));
+        if(! JFolder::exists($jBase.'/'.$a))
+            throw new Exception(sprintf('Path %s does not exist', $jBase.'/'.$a));
 
-        if(! JFolder::exists($platformBase.'/'.$b))
-            throw new Exception(sprintf('Path %s does not exist', $platformBase.'/'.$b));
+        if(! JFolder::exists($jBase.'/'.$b))
+            throw new Exception(sprintf('Path %s does not exist', $jBase.'/'.$b));
 
         if('current' == $a || 'current' == $b)
-        {
-            exec('cd '.$platformBase.'/current/ && git describe > version.txt');
-        }
+            exec('cd '.$jBase.'/current/ && git describe > '.JPATH_BASE.'/build/'.$jTarget.'/current/version.txt');
 
         $this->notes[$a] = array();
         $this->notes[$b] = array();
@@ -214,8 +234,8 @@ class JDocBuild extends JApplicationCli
         if(JFile::exists($fName))
             $this->notes[$b] = $this->getNotes($fName);
 
-        $this->processXml($platformBase.'/'.$a.'/build/docs/classes.xml', $a);
-        $this->processXml($platformBase.'/'.$b.'/build/docs/classes.xml', $b);
+        $this->processXml($jBase.'/'.$a.'/build/docs/classes.xml', $a);
+        $this->processXml($jBase.'/'.$b.'/build/docs/classes.xml', $b);
 
         $output = array();
 
@@ -308,10 +328,10 @@ class JDocBuild extends JApplicationCli
             }
         }
 
-        $this->formatHtml($output, $a, $b);
+        $this->formatHtml($output, $a, $b, $jTarget);
     }
 
-    private function formatHtml($output, $a, $b)
+    private function formatHtml($output, $a, $b, $jTarget)
     {
         $html = array();
 
@@ -381,11 +401,11 @@ class JDocBuild extends JApplicationCli
 
         $this->page->body = implode("\n", $html);
 
-        $versionTo = ('current' == $a || 'current' == $b)
-            ? JFile::read(JPATH_BASE.'/sources/joomla-platform/current/version.txt')
+        $versionTo = ('current' == $b)
+            ? JFile::read(JPATH_BASE.'/build/'.$jTarget.'/current/version.txt')
             : $b;
 
-        $this->page->tagline = sprintf('Changes in classes from version %s to %s'
+        $this->page->tagline = sprintf('Changes in '.$jTarget.' classes<br /> from version %s to %s'
             , '<span class="versionNr">'.$a.'</span>'
             , '<span class="versionNr">'.$versionTo.'</span>');
 
@@ -393,10 +413,11 @@ class JDocBuild extends JApplicationCli
 
         $contents = ob_get_clean();
 
-        JFile::write(OUTPUT_DIR.'/changes-'.$b.'.html', $contents);
+        $path = OUTPUT_DIR.'/changes/'.$jTarget.'-'.$b.'.html';
 
-        $this->out('File has been written to: '.OUTPUT_DIR.'/changes.html');
+        JFile::write($path, $contents);
 
+        $this->out('File has been written to: '.$path);
     }
 
     private function getNotes($path)
@@ -459,6 +480,14 @@ class JDocBuild extends JApplicationCli
         }
 
         ksort($this->classDiff);
+    }
+
+    private function say($what, $nl = true)
+    {
+        if(0)
+            return;
+
+        $this->out($what, $nl);
     }
 }
 
