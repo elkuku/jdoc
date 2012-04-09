@@ -10,3 +10,12 @@
 [submodule "sources/joomla-platform/11.4"]
 	path = sources/joomla-platform/11.4
 	url = git://github.com/joomla/joomla-platform.git
+[submodule "sources/joomla-cms/current"]
+	path = sources/joomla-cms/current
+	url = git://github.com/joomla/joomla-cms.git
+[submodule "sources/joomla-platform/11.2"]
+	path = sources/joomla-platform/11.2
+	url = git://github.com/joomla/joomla-platform.git
+[submodule "sources/joomla-platform/11.1"]
+	path = sources/joomla-platform/11.1
+	url = git://github.com/joomla/joomla-platform.git
