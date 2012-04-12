@@ -31,8 +31,10 @@
     </header>
 </div>
 
-<div class="outer">
-    <?= $this->page->body ?>
+<div id="main_content_wrap" class="outer">
+    <section id="main_content" class="inner">
+        <?= $this->page->body ?>
+    </section>
 </div>
 
 <div id="footer_wrap" class="outer">

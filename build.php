@@ -55,19 +55,20 @@ class JDocBuild extends JApplicationCli
 //            ->generateDiffList()
             ->generateClassList();
 
+        $this->say('Doing diffs...');
+
         // @todo get version from input (any)
-        $a = '11.4';
-        $b = 'current';
-//        $b = '11.4';
-        $jTarget = 'joomla-platform';
+        $diffs = array(
+            array('joomla-platform', '11.4', 'current')
+            , array('joomla-platform', '11.3', '11.4')
+            , array('joomla-cms', '2.5.4', 'current')
+            , array('joomla-cms', '1.5.26', '2.5.4')
+        );
 
-        $this->makeDiff($a, $b, $jTarget);
-        $a = '11.3';
-//        $b = 'current';
-        $b = '11.4';
-        $jTarget = 'joomla-platform';
-
-        $this->makeDiff($a, $b, $jTarget);
+        foreach($diffs as $jTarget)
+        {
+            $this->makeDiff($jTarget[1], $jTarget[2], $jTarget[0]);
+        }
 
         $this->out('Finished =;');
     }
@@ -77,7 +78,11 @@ class JDocBuild extends JApplicationCli
         $this->say('cleaning...', false);
 
         if(! $this->input->get('rebuild'))
+        {
+            $this->say('n/a');
+
             return $this;
+        }
 
         JFolder::delete(JPATH_BASE.'/build/');
         JFolder::create(JPATH_BASE.'/build/');
@@ -155,51 +160,24 @@ class JDocBuild extends JApplicationCli
             {
                 $path = $jBase.'/'.$version.'/xml/classes.xml';
 
-                $xml = JFactory::getXml($path);
 
-                if(! $xml)
-                    throw new Exception(__METHOD__.' - Unreadable XML file at: '.$path);
-
-                $list = array();
-
-                /* @var JXMLElement $class */
-                foreach($xml->class as $class)
-                {
-                    $name = (string)$class->attributes()->name;
-
-                    if($name != (string)$class->attributes()->full)
-                        throw new Exception(__METHOD__.' dunno what to do :( --> '
-                            .$name.' vs '.$class->attributes()->full);
-
-                    $parts = explode('/', $class->attributes()->xml);
-
-                    array_pop($parts);
-$a = count($parts);
-                    if(1 == count($parts))
-                    {
-                        $library = 'Base';
-                        $package = 'Base';
-                    }
-                    else
-                    {
-                        $library = ucfirst($parts[1]);
-                        $package =(isset($parts[2])) ? ucfirst($parts[2]) : 'Base';
-                    }
-
-                    $list[$library][$package][] = $name;
-                }
-
-                ksort($list);
+                $list = JDocsReader::parseClassList($path);
 
                 $html = array();
 
                 foreach($list as $library => $packages)
                 {
-                    $html[] = '<h2>'.$library.'</h2>';
+                    $html[] = '<h2 class="library"><a name="'.$library.'"></a>'
+                        .'<a href="#'.$library.'">'.$library.'</a></h2>';
+
+                    ksort($packages);
 
                     foreach($packages as $package => $classes)
                     {
-                        $html[] = '<h3>'.$package.'</h3>';
+                        $aName = $library.'-'.$package;
+
+                        $html[] = '<h3><a name="'.$aName.'"></a>'
+                            .'<a href="#'.$aName.'">'.$package.'</a></h3>';
 
                         $html[] = '<ul>';
 
@@ -209,8 +187,8 @@ $a = count($parts);
                         {
                             $html[] = '<li>'.$class.'</li>';
                         }
-                        $html[] = '</ul>';
 
+                        $html[] = '</ul>';
                     }
                 }
 
@@ -238,7 +216,6 @@ $a = count($parts);
                 $this->out('File has been written to: '.$path);
             }
         }
-
     }
 
     private function makeIndexPage()
@@ -287,7 +264,7 @@ $a = count($parts);
 
     private function makeDiff($a, $b, $jTarget)
     {
-        $jBase = JPATH_BASE.'/sources/'.$jTarget;
+        $jBase = JPATH_BASE.'/build/'.$jTarget;
 
         if(! JFolder::exists($jBase.'/'.$a))
             throw new Exception(sprintf('Path %s does not exist', $jBase.'/'.$a));
@@ -308,10 +285,13 @@ $a = count($parts);
         if(JFile::exists($fName))
             $this->notes[$b] = $this->getNotes($fName);
 
-        $this->processXml($jBase.'/'.$a.'/build/docs/classes.xml', $a);
-        $this->processXml($jBase.'/'.$b.'/build/docs/classes.xml', $b);
+        $this->processXml($jBase.'/'.$a.'/xml/classes.xml', $a);
+        $this->processXml($jBase.'/'.$b.'/xml/classes.xml', $b);
 
         $output = array();
+
+        // Search for a class with the same name but different caps.
+        $lowerKeys = array_change_key_case($this->classDiff, CASE_LOWER);
 
         foreach($this->classDiff as $className => $versions)
         {
@@ -413,7 +393,7 @@ $a = count($parts);
         foreach($output as $className => $result)
         {
             $html[] = '<h2 class="state'.$result->status.'">'
-                .'<a name ="'.$className.'" href="#'.$className.'">'
+                .'<a name ="'.$className.'"></a><a href="#'.$className.'">'
                 .$className
                 .'</a>'
                 .'</h2>';
@@ -421,7 +401,7 @@ $a = count($parts);
             if($result->note)
                 $html[] = '<h3 class="note">'.$result->note.'</h3>';
 
-            $html[] = '<ul>';
+            $html[] = '<ul class="status">';
 
             switch($result->status)
             {
@@ -431,8 +411,19 @@ $a = count($parts);
                     break;
 
                 case 1 :
-                    // The class does not exist in one version
-                    $html[] = '<li class="missing">'.sprintf('Class does not exist in: <strong>%s</strong>', $result->missingIn).'</li>';
+                    // The class does not exist in one version.
+                    //$html[] = '<li class="missing">'.sprintf('Class does not exist in: <strong>%s</strong>', $result->missingIn).'</li>';
+
+                    // We assume here, that version B is "newer" than version A
+                    if($result->missingIn == $b)
+                    {
+                        $html[] = '<li class="removed">'.sprintf('Class has been removed in: <strong>%s</strong>', $result->missingIn).'</li>';
+                    }
+                    else
+                    {
+                        $html[] = '<li class="new">'.sprintf('Class has been added in <strong>%s</strong>', $result->missingIn).'</li>';
+
+                    }
 
                     break;
 
@@ -442,10 +433,28 @@ $a = count($parts);
                     {
                         if(1 == $member->status)
                         {
+                            // We assume here, that version B is "newer" than version A
+                            if($member->missingIn == $b)
+                            {
+                                $html[] = '<li class="removed">'
+                                    .sprintf('Member <strong>%s</strong> has been removed in: <strong>%s</strong>'
+                                        , $mName, $member->missingIn)
+                                    .'</li>';
+                            }
+                            else
+                            {
+                                $html[] = '<li class="new">'
+                                    .sprintf('Member <strong>%s</strong> has been added in <strong>%s</strong>'
+                                    , $mName, $member->missingIn)
+                                    .'</li>';
+
+                            }
+/*
                             $html[] = '<li class="missing">'
                                 .sprintf('Member <strong>%s</strong> does not exist in: <strong>%s</strong>'
                                     , $mName, $member->missingIn)
                                 .'</li>';
+                            */
                             continue;
                         }
                         if(2 == $member->status)
@@ -572,6 +581,8 @@ class JDocDiffResultClass
     public $status = 0;
 
     public $missingIn = '';
+
+    public $renamedTo = '';
 
     public $xml = null;
 
