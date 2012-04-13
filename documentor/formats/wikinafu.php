@@ -14,6 +14,10 @@ define('W_BOLD', "'''");
 
 class ReflectorFormatWikiNafu
 {
+    private $className = '';
+
+    private $path = '';
+
     private function formatClassMembers($xml)
     {
         if(! $xml->member)
@@ -34,13 +38,18 @@ class ReflectorFormatWikiNafu
         foreach($xml->member as $member)
         {
             $wikitext[] = '|-';
+
             $wikitext[] = '| '
                 .($member->attributes()->visibility ? $member->attributes()->visibility.' ' : '')
                 .('true' == (string)$member->attributes()->static ? 'static ' : '');
 
-            $wikitext[] = ($member->docblock && $member->docblock->var)
-                ? '|'.$member->docblock->var->attributes()->type
-                : '| {{@todo|typ}}';
+            $type =($member->docblock && $member->docblock->var)
+                ? $member->docblock->var->attributes()->type
+                : '{{@todo|typ}}';
+
+            $type =('J' == substr($type, 0, 1)) ? '[['.$type.']]': $type;
+
+            $wikitext[] = '|'.$type;
 
             $wikitext[] = '| '.W_BOLD.'<tt>$'.$member->attributes()->name.'</tt>'.W_BOLD;
 
@@ -92,19 +101,23 @@ class ReflectorFormatWikiNafu
 
             $isStatic = 'true' == (string)$method->attributes()->static;
 
+            $deprecated =($method->docblock && $method->docblock->deprecated) ? '<br />'.W_BOLD.'@deprecated'.W_BOLD : '';
+
             $wikiClassPage .= '|-'.NL;
             $wikiClassPage .= '| '
                 .($method->attributes()->visibility ? $method->attributes()->visibility.' ' : '')
                 .('true' == (string)$method->attributes()->abstract ? 'abstract ' : '')
                 .('true' == (string)$method->attributes()->final ? 'final ' : '')
                 .($isStatic ? 'static ' : '')
+                .$deprecated
                 .NL;
 
             $wikiClassPage .= '| <tt>[[/'.$method->attributes()->name.'|'
                 //  .($isStatic ? '::' : '->')
                 .W_BOLD.$method->attributes()->name.W_BOLD.'('.implode(', ', $params).')]]</tt>'.NL;
 
-            $wikiClassPage .= $method->docblock->description->attributes()->compact.'{{@todo|Beschreibung übersetzen}}'.NL;
+            if($method->docblock->description)
+                $wikiClassPage .= $method->docblock->description->attributes()->compact.'{{@todo|Beschreibung übersetzen}}'.NL;
         }
 
         $wikiClassPage .= '|}'.NL.NL;
@@ -190,7 +203,11 @@ class ReflectorFormatWikiNafu
                 $ret = '';
                 $ret .= '* '.W_BOLD.'@return'.W_BOLD;
 
-                $ret .= ' {{mark|'.$method->docblock->return->attributes()->type.'}}';
+                $t = $method->docblock->return->attributes()->type;
+
+                $t =('J' == substr($t, 0, 1)) ? '[['.$t.']]' : $t;
+
+                $ret .= ' {{mark|'.$t.'}}';
                 $ret .= ' '.$method->docblock->return->attributes()->description;
 
                 $page[] = $ret;
@@ -224,13 +241,16 @@ class ReflectorFormatWikiNafu
 
         $page[] = '==Quellcode==';
 
-        $page[] = '<nafucode>'.$className.'/'.$methodName.'</nafucode>'.NL;
+        $page[] = '<nafucode>@J/'.$className.'/'.$methodName.'</nafucode>'.NL;
 
         $page[] = '==Siehe auch==';
-        $s = ''; //($class->subPackageName) ? $class->subPackageName.'/' : '';
+        $sig =('true' == (string)$method->attributes()->static) ? '::' : '->';
+        /*
         $page[] = '* <tt>[http://api.joomla.org/Joomla-Platform/'.$s.$className.'.html#'
             .$methodName.' '.$className.'->'.$methodName
             .'()]</tt> auf api.joomla.org'.NL;
+        */
+        $page[] = '* <tt>['.$this->getApiLink($methodName).' '.$className.$sig.$methodName.']</tt> auf api.joomla.org'.NL;
 
         $page[] = '[[Kategorie:Joomla! Programmierung|'.$methodName.']]';
         $page[] = '[[Kategorie:Framework|'.$methodName.']]';
@@ -241,6 +261,9 @@ class ReflectorFormatWikiNafu
 
     public function reflectClass(SimpleXMLElement $xml, $path, $className)
     {
+        $this->path = $path;
+        $this->className = $className;
+
         $html = '';
         $classPanel = '';
 
@@ -269,7 +292,7 @@ class ReflectorFormatWikiNafu
         $wikiClassPage .= ('true' == (string)$class->attributes()->abstract) ? 'abstract ' : '';
         $wikiClassPage .= 'class '.$className;
         $wikiClassPage .= ($extends) ? ' extends [['.$extends.']]' : '';
-        $wikiClassPage .= W_BOLD.'</tt>';
+        $wikiClassPage .= '</tt>'.W_BOLD;
         $wikiClassPage .= NL.NL;
 
         $wikiClassPage .= '{{@todo|Beschreibung übersetzen}}'.NL.NL;
@@ -301,9 +324,6 @@ class ReflectorFormatWikiNafu
 
         $wikiClassPage .= '== Importieren =='.NL;
         $wikiClassPage .= '{{@todo}} jimport oder autloader ??'.NL.NL;
-        //$s = ($class->subSubPackage) ? $class->subSubPackage.'.' : '';
-        //$fN = (strpos($rawDoc->fileName, '.')) ? substr($rawDoc->fileName, 0, strpos($rawDoc->fileName, '.')) : $rawDoc->fileName;
-        //$wikiClassPage .= '<source lang="php">jimport( \'joomla.'.$class->subPackage.'.'.$s.$fN.'\' );</source>'.NL.NL;
 
         if($extends)
         {
@@ -326,8 +346,8 @@ class ReflectorFormatWikiNafu
         $wikiClassPage .= $this->formatClassMethods($class);
 
         $wikiClassPage .= '== Siehe auch =='.NL;
-        $s = ($class->subPackageName) ? $class->subPackageName.'/' : '';
-        $wikiClassPage .= '* <tt>[http://api.joomla.org/Joomla-Platform/'.$s.$className.'.html '.$className.']</tt> auf api.joomla.org'.NL.NL;
+        $wikiClassPage .= '* <tt>['.$this->getApiLink().' '.$className.']</tt> auf api.joomla.org'.NL.NL;
+
         $wikiClassPage .= '[[Kategorie:Joomla! Programmierung|'.$className.']]'.NL;
         $wikiClassPage .= '[[Kategorie:Framework|'.$className.']]'.NL;
         $wikiClassPage .= '[[Kategorie:'.$className.'|'.$className.']]'.NL;
@@ -341,7 +361,7 @@ class ReflectorFormatWikiNafu
 
         $html .= '<div id="page-'.$className.'" style="display: none;">';
 
-        $html .= '<textarea  class="code" style="width: 100%" rows="40" cols="150" id="'.$className.'-xxpage"'
+        $html .= '<textarea class="code" style="width: 100%" rows="40" cols="150" id="'.$className.'-xxpage"'
             .' onfocus="aSelect(\''.$className.'-xxpage\');" onclick="aSelect(\''.$className.'-xxpage\')">'
             .htmlspecialchars($wikiClassPage)
             .'</textarea>';
@@ -363,4 +383,31 @@ class ReflectorFormatWikiNafu
         return '<table><tr valign="top"><td>'.$classPanel.'</td><td>'.$html.'</td></tr></table>';
     }
 
+    private function getApiLink($method = '')
+    {
+        $replacements = array(
+           'Filesystem' => 'FileSystem'
+            , 'Github' => 'GitHub'
+            , 'Html' => 'HTML'
+            , 'Http' => 'HTTP'
+        );
+
+        $parts = explode('/', $this->path);
+        array_pop($parts);
+
+        $package = '';
+
+        if(isset($parts[2]) && 'joomla' == $parts[1])
+        {
+            $package = ucfirst($parts[2]);
+            $package =(array_key_exists($package, $replacements)) ? $replacements[$package] : $package;
+            $package .= '/';
+        }
+
+        $method =($method) ? '#'.$method : '';
+
+        $link = 'http://api.joomla.org/Joomla-Platform/'.$package.$this->className.'.html'.$method;
+
+        return $link;
+    }
 }//class
