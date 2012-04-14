@@ -43,11 +43,11 @@ class ReflectorFormatWikiNafu
                 .($member->attributes()->visibility ? $member->attributes()->visibility.' ' : '')
                 .('true' == (string)$member->attributes()->static ? 'static ' : '');
 
-            $type =($member->docblock && $member->docblock->var)
+            $type = ($member->docblock && $member->docblock->var)
                 ? $member->docblock->var->attributes()->type
                 : '{{@todo|typ}}';
 
-            $type =('J' == substr($type, 0, 1)) ? '[['.$type.']]': $type;
+            $type = ('J' == substr($type, 0, 1)) ? '[['.$type.']]' : $type;
 
             $wikitext[] = '|'.$type;
 
@@ -101,7 +101,7 @@ class ReflectorFormatWikiNafu
 
             $isStatic = 'true' == (string)$method->attributes()->static;
 
-            $deprecated =($method->docblock && $method->docblock->deprecated) ? '<br />'.W_BOLD.'@deprecated'.W_BOLD : '';
+            $deprecated = ($method->docblock && $method->docblock->deprecated) ? '<br />'.W_BOLD.'@deprecated'.W_BOLD : '';
 
             $wikiClassPage .= '|-'.NL;
             $wikiClassPage .= '| '
@@ -205,7 +205,7 @@ class ReflectorFormatWikiNafu
 
                 $t = $method->docblock->return->attributes()->type;
 
-                $t =('J' == substr($t, 0, 1)) ? '[['.$t.']]' : $t;
+                $t = ('J' == substr($t, 0, 1)) ? '[['.$t.']]' : $t;
 
                 $ret .= ' {{mark|'.$t.'}}';
                 $ret .= ' '.$method->docblock->return->attributes()->description;
@@ -244,7 +244,7 @@ class ReflectorFormatWikiNafu
         $page[] = '<nafucode>@J/'.$className.'/'.$methodName.'</nafucode>'.NL;
 
         $page[] = '==Siehe auch==';
-        $sig =('true' == (string)$method->attributes()->static) ? '::' : '->';
+        $sig = ('true' == (string)$method->attributes()->static) ? '::' : '->';
         /*
         $page[] = '* <tt>[http://api.joomla.org/Joomla-Platform/'.$s.$className.'.html#'
             .$methodName.' '.$className.'->'.$methodName
@@ -385,29 +385,38 @@ class ReflectorFormatWikiNafu
 
     private function getApiLink($method = '')
     {
+        // The "replacements" have differences from the standard naming scheme..
         $replacements = array(
-           'Filesystem' => 'FileSystem'
-            , 'Github' => 'GitHub'
-            , 'Html' => 'HTML'
-            , 'Http' => 'HTTP'
+            'Filesystem' => 'FileSystem'
+        , 'Github' => 'GitHub'
+        , 'Html' => 'HTML'
+        , 'Http' => 'HTTP'
         );
 
         $parts = explode('/', $this->path);
+
+        if(! count($parts) > 1)
+            return '';
+
         array_pop($parts);
+
+        if(isset($parts[1]) && 'joomla' != $parts[1])
+        {
+            // !!! Only Joomla! platform classes are documented on api.joomla.org !!!
+            return '';
+        }
 
         $package = '';
 
-        if(isset($parts[2]) && 'joomla' == $parts[1])
+        if(isset($parts[2]))
         {
             $package = ucfirst($parts[2]);
-            $package =(array_key_exists($package, $replacements)) ? $replacements[$package] : $package;
+            $package = (array_key_exists($package, $replacements)) ? $replacements[$package] : $package;
             $package .= '/';
         }
 
-        $method =($method) ? '#'.$method : '';
+        $method = ($method) ? '#'.$method : '';
 
-        $link = 'http://api.joomla.org/Joomla-Platform/'.$package.$this->className.'.html'.$method;
-
-        return $link;
+        return 'http://api.joomla.org/Joomla-Platform/'.$package.$this->className.'.html'.$method;
     }
 }//class

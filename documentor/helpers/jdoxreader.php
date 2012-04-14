@@ -54,7 +54,7 @@ class JDocsReader
     public static function parseClassList($path)
     {
         $xml = JFactory::getXml($path);
-
+//$namesOnly = array();
         if(! $xml)
             throw new Exception(__METHOD__.' - Unreadable XML file at: '.$path);
 
@@ -64,6 +64,7 @@ class JDocsReader
         foreach($xml->class as $class)
         {
             $name = (string)$class->attributes()->name;
+//            $namesOnly[] = $name;
 
             if($name != (string)$class->attributes()->full)
                 throw new Exception(__METHOD__.' dunno what to do :( --> '
@@ -93,6 +94,9 @@ class JDocsReader
         }
 
         ksort($list);
+//        sort($namesOnly);
+
+//        echo "'".implode("', '", $namesOnly)."'";
 
         return $list;
     }

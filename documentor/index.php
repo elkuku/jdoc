@@ -15,18 +15,19 @@ define('JPATH_BASE', dirname(__FILE__));
 define('JPATH_SITE', JPATH_BASE);
 define('JPATH_THEMES', JPATH_BASE.'/themes');
 
-define('JPATH_BULD', dirname(__DIR__).'/build');
+define('JPATH_BULD', dirname(dirname(__FILE__)).'/build');
 
 define('NL', "\n");
 define('BR', '<br />');
 
 // Increase error reporting to that any errors are displayed.
 // Note, you would not use these settings in production.
-error_reporting(- 1);
+error_reporting(E_ALL);
 ini_set('display_errors', true);
 
 // Bootstrap the application.
-require getenv('JOOMLA_PLATFORM_PATH_11_4').'/libraries/import.php';
+$platformPath = dirname(dirname(__FILE__)).'/sources/joomla-platform/11.4';
+require $platformPath.'/libraries/import.php';
 
 require 'helpers/jdoxreader.php';
 
@@ -77,54 +78,51 @@ class JDoc extends JApplicationWeb
 
         $path = JPATH_BULD.'/'.$jTarget.'/'.$version.'/xml/classes.xml';
         $classList = JDocsReader::parseClassList($path);
-        ob_start();
-        ?>
-    <div id="pane-selector" class="php-file-tree">
-        <ul>
-            <?php
-            foreach($classList as $library => $packages)
+
+        $html = array();
+        $html[] = '<h1>'.ucfirst($jTarget).' '.$version.'</h1>';
+        $html[] = '<div id="pane-selector" class="php-file-tree">';
+        $html[] = '   <ul>';
+
+        foreach($classList as $library => $packages)
+        {
+            ksort($packages);
+            $html[] = '      <li class="pft-directory"><div>'.$library.'</div>';
+            $html[] = '         <ul>';
+
+            foreach($packages as $package => $classes)
             {
-                ksort($packages);
-                echo '<li class="pft-directory"><div>'.$library.'</div>';
-                echo '<ul>';
-                foreach($packages as $package => $classes)
+                ksort($classes);
+                $html[] = '            <li class="pft-directory"><div>'.$package.'</div>';
+                $html[] = '               <ul>';
+                foreach($classes as $name => $class)
                 {
-                    ksort($classes);
-                    echo '<li class="pft-directory"><div>'.$package.'</div>';
-                    echo '<ul>';
-                    foreach($classes as $name => $class)
-                    {
-                        $id = $name;
-                        $d = $class->attributes()->xml;
-                        $f = $name;
+                    $id = $name;
+                    $d = $class->attributes()->xml;
+                    $f = $name;
 
-                        echo "<li class=\"pft-file ext-joo\" id=\"tl_$id\"
-                            onclick=\"load_file('$d', '$f', 'tl_$id');\">$name</li>";
-                    }
-                    //foreach
-                    echo '</ul>';
-                    echo '</li>';
+                    $html[] = "                  <li class=\"pft-file ext-joo\" id=\"tl_$id\""
+                        ." onclick=\"load_file('$d', '$f', 'tl_$id');\">$name</li>";
                 }
-                //foreach
-                echo '</ul>';
-                echo '</li>';
+
+                $html[] = '               </ul>';
+                $html[] = '            </li>';
             }
-            ?>
-        </ul>
-    </div>
-    <div id="pane-code">
-        <div id="jdocDisplay">
-            <hi
-        </div>
 
-    </div>
-    <div style="clear: both;"></div>
-    <?php
+            $html[] = '         </ul>';
+            $html[] = '      </li>';
+        }
 
-//    var_dump($classList);
+        $html[] = '   </ul>';
+        $html[] = '</div>';
+        $html[] = '<div id="pane-code">';
+        $html[] = '<div id="jdocDisplay"></div>';
+        $html[] = '</div>';
+        $html[] = '<div style="clear: both;"></div>';
 
-        $output = ob_get_clean();
+        $output = implode(NL, $html);
 
+        $this->document->setTitle('J!Doc Documentor');
         $this->document->setBuffer($output, array('type' => 'component', 'name' => 'main'));
     }
 
@@ -141,19 +139,27 @@ class JDoc extends JApplicationWeb
     }
 }
 
+try
+{
+
 // Instantiate the application object, passing the class name to JApplicationWeb::getInstance
 // and use chaining to execute the application.
 // Instantiate the application.
-$application = JApplicationWeb::getInstance('JDoc');
+    $application = JApplicationWeb::getInstance('JDoc');
 
 // Initialise the application.
-$application->initialise();
+    $application->initialise();
 
 // Store the application.
-JFactory::$application = $application;
+    JFactory::$application = $application;
 
 // Execute the application.
-$application->execute();
+    $application->execute();
+}
+catch(Exception $e)
+{
+    echo $e->getMessage();
+}
 return;
 
 //--DEBUG
